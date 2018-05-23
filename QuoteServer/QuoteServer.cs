@@ -17,18 +17,18 @@ namespace WinServices
     {
         private TcpListener listener;
         private int port;
-        private string IPAddr;
+        private string MyIPAddr;
         private Thread listenerThread;
         private Thread StartThread;
+        private string MangerIP;
 
+        private Packet Packet;
 
-        private Packet Packet { get; set; }
-
-        public QuoteServer(string IpAddress, int port)
+        public QuoteServer(string MyIP, string ManagerIP, int port)
         {
-            this.IPAddr = IpAddress;
+            this.MyIPAddr = MyIP;
             this.port = port;
-
+            this.MangerIP = ManagerIP;
         }
         
 
@@ -58,7 +58,7 @@ namespace WinServices
                 NetworkStream stream = null;
                 try
                 {
-                    client.Connect(IPAddr, 4568);
+                    client.Connect(MangerIP, 4568);
 
                     stream = client.GetStream();
 
@@ -66,7 +66,7 @@ namespace WinServices
 
                     stream.Write(buffer, 0, buffer.Length);
 
-                    Console.WriteLine("Проверка соединения по адресу: " + IPAddr);
+                    Console.WriteLine("Проверка соединения по адресу: " + MangerIP);
                 }
                 catch (SocketException ex)
                 {
@@ -85,7 +85,49 @@ namespace WinServices
                         client.Close();
                     }
                 }
-                Thread.Sleep(5000);
+                Thread.Sleep(2000);
+            }
+
+        }
+
+        public void SendPacket(Packet pak)
+        {
+
+            while (true)
+            {
+                TcpClient client = new TcpClient();
+
+                NetworkStream stream = null;
+                try
+                {
+                    client.Connect(MangerIP, 4568);
+
+                    stream = client.GetStream();
+
+                    byte[] buffer = ToByteArray<Packet>(pak);
+
+                    stream.Write(buffer, 0, buffer.Length);
+
+                    Console.WriteLine("Проверка соединения по адресу: " + MangerIP);
+                }
+                catch (SocketException ex)
+                {
+                    Console.WriteLine(ex.Message.ToString());
+                }
+                finally
+                {
+                    //
+                    if (stream != null)
+                    {
+                        stream.Close();
+                    }
+
+                    if (client.Connected)
+                    {
+                        client.Close();
+                    }
+                }
+                Thread.Sleep(2000);
             }
 
         }
@@ -95,9 +137,12 @@ namespace WinServices
         {
             try
             {
-                IPAddress ipAddress =  IPAddress.Parse(IPAddr);
+                IPAddress ipAddress =  IPAddress.Parse(MyIPAddr);
+
                 listener = new TcpListener(ipAddress, port);
+
                 listener.Start();
+
                 while (true)
                 {
                     Socket clientSocket = listener.AcceptSocket();
@@ -112,9 +157,15 @@ namespace WinServices
 
                         Array.Copy(buffer, buf, res);
 
+                        Packet = new Packet();
+
                         Packet = FromByteArray<Packet>(buf);
 
-                        
+                        TODO dowork = new TODO(Packet);
+
+                        dowork.Work();
+
+                        SendPacket(Packet);
                     }
 
                     clientSocket.Close();

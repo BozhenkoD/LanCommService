@@ -17,12 +17,18 @@ namespace Protocols
 
         public bool FindNumber { get; set; }
 
-        public List<string> FilePath { get; set; }
+        public string FilePath { get; set; }
 
-        public string FileInfo { get; set; }
+        public List<string> FileInfo = new List<string>();
 
         public bool Rar { get; set; }
 
         public int Progress { get; set; }
+
+        public string Directory { get; set; }
+
+        public long CountFiles { get; set; }
+
+        public long CurrentFile { get; set; }
     }
 }
