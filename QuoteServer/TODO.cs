@@ -24,18 +24,7 @@ namespace WinServices
         {
             Search rea = new Search(pack);
 
-            rea.FindFiles(pack , 0);
-
-            
+            rea.FindFiles(pack);
         }
-
-        public void CountFiles()
-        {
-            Search rea = new Search(pack);
-
-            rea.FindFiles(pack, 1);
-        }
-
-        
     }
 }

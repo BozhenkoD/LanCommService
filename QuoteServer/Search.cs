@@ -23,65 +23,69 @@ namespace WinServices
 
         double a = 0, b = 0;
 
-        private void FindInDir(DirectoryInfo dir, string logFileName, int CardNumbReg, int FilesTypesReg, int mainReg, long files, long currentFiles)
+        private void FindInDir(DirectoryInfo dir, string logFileName, int CVV, int MSOffice, long files, long currentFiles)
         {
+            Packets.CountFiles = dir.GetFiles().Count();
+
             foreach (FileInfo file in dir.GetFiles())
             {
-                if (mainReg == 1)
-                {
-                    if (FilesTypesReg == 1)
-                    {
-                        if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx" || file.Extension.ToLower() == ".xls" || file.Extension.ToLower() == ".xlsx")
-                        {
-                            files++;
-                            continue;
-                        }
-                        continue;
-                    }
-                    else
-                    {
-                        files++;
-                        continue;
-                    }
-                }
-                currentFiles++;
-                string Path;
-                a = currentFiles;
-                b = files;
+                //if (mainReg == 1)
+                //{
+                //    if (MSOffice == 1)
+                //    {
+                //        if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx" || file.Extension.ToLower() == ".xls" || file.Extension.ToLower() == ".xlsx")
+                //        {
+                //            Packets.CountFiles++;//files++;
+                //            continue;
+                //        }
+                //        continue;
+                //    }
+                //    else
+                //    {
+                //        Packets.CountFiles++;//files++;
+                //        continue;
+                //    }
+                //}
 
-                Packets.Progress = ((int)((a / b) * 100));
-               
+                ++Packets.CurrentFile;
+
+                string Path;
+
+                Packets.Progress = ((int)(Packets.CurrentFile / Packets.CountFiles) * 100);
 
                 if (file.Extension.ToLower() == ".exe" || file.Extension.ToLower() == ".dll")
                     continue;
                 if (file.Length > 120000000)
                     continue;
 
-                if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx" || file.Extension.ToLower() == ".xls" || file.Extension.ToLower() == ".xlsx")
+                if (MSOffice == 1)
                 {
-                    if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx")
+                    if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx" || file.Extension.ToLower() == ".xls" || file.Extension.ToLower() == ".xlsx")
                     {
-                        if (MSWordMatches(file.FullName, CardNumbReg) == true)
+                        if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx")
                         {
-                            Path = file.FullName;
-                            //bgW.ReportProgress(-1, Path);
-                           
-                           // WriteLog(logFileName);
+                            if (MSWordMatches(file.FullName, CVV) == true)
+                            {
+                                Path = file.FullName;
+                                //bgW.ReportProgress(-1, Path);
+
+                                // WriteLog(logFileName);
+                            }
                         }
-                    }
-                    else
-                    {
-                        if (MSExcelMatches(file.FullName, CardNumbReg) == true)
+                        else
                         {
-                            Path = file.FullName;
-                            //bgW.ReportProgress(-1, Path);
-                            //WriteLog(logFileName);
+                            if (MSExcelMatches(file.FullName, CVV) == true)
+                            {
+                                Path = file.FullName;
+                                //bgW.ReportProgress(-1, Path);
+                                //WriteLog(logFileName);
+                            }
                         }
+                        continue;
                     }
-                    continue;
                 }
 
-                if ((FindMatches(file.FullName, CardNumbReg) == true) && FilesTypesReg != 1)
+                if ((FindMatches(file.FullName, CVV) == true) && MSOffice != 1)
                 {
                     Path = file.FullName;
                 }
@@ -93,7 +97,7 @@ namespace WinServices
             {
                 try
                 {
-                    this.FindInDir(subdir, logFileName, CardNumbReg, FilesTypesReg, mainReg, ref files, ref currentFiles);
+                    this.FindInDir(subdir, logFileName, CVV, MSOffice, Packets.CountFiles, Packets.CurrentFile);
                 }
                 catch (Exception)
                 {
@@ -102,13 +106,13 @@ namespace WinServices
             }
 
         }
-        public void FindFiles(Packet Pak, int mainReg)
+        public void FindFiles(Packet Pak)
         {
             string LogFile = (DateTime.Now.ToString() + ".txt").Replace(':', '-');
 
             try
             {
-                this.FindInDir(new DirectoryInfo(Pak.Directory), LogFile, Convert.ToInt32(Pak.CVV), Convert.ToInt32(Pak.MSOffice), mainReg, Pak.CountFiles, Pak.CurrentFile);
+                this.FindInDir(new DirectoryInfo(Pak.Directory), LogFile, Convert.ToInt32(Pak.CVV), Convert.ToInt32(Pak.MSOffice), Pak.CountFiles, Pak.CurrentFile);
             }
             catch (Exception)
             {
@@ -154,7 +158,6 @@ namespace WinServices
                         Packets.FileInfo.Add(fPath);
                         Packets.FileInfo.Add(fl.Substring(i, 16));
                         Packets.FileInfo.Add(i.ToString());
-                        
                     }
 
                 }
@@ -210,74 +213,85 @@ namespace WinServices
 
         public bool MSWordMatches(string fPath, int reg)
         {
-            Microsoft.Office.Interop.Word.Application app = new Microsoft.Office.Interop.Word.Application();
-            app.Visible = false;
-            Document doc = app.Documents.Open(fPath);
-
-            //Get all words
-            string allWords = doc.Content.Text;
-            doc.Close();
-            app.Quit();
-
-            Regex regex1 = null;
-            Regex regex2 = null;
-            Regex regex3 = null;
-
-            if (reg == 0)
+            try
             {
-                regex1 = new Regex(@"[0-9]{16}");
-                regex2 = new Regex("[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}");
-                regex3 = new Regex(@"[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}");
-            }
-            else
-            {
-                regex1 = new Regex(@"[0-9]{19}");
-                regex2 = new Regex("[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{3}");
-                regex3 = new Regex(@"[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{3}");
-            }
-            MatchCollection matches1 = regex1.Matches(allWords);
-            MatchCollection matches2 = regex2.Matches(allWords);
-            MatchCollection matches3 = regex3.Matches(allWords);
+                Microsoft.Office.Interop.Word.Application app = new Microsoft.Office.Interop.Word.Application();
+                app.Visible = false;
+                Document doc = app.Documents.Open(fPath);
 
-            if (matches1.Count != 0)
-            {
-                foreach (Match match in regex1.Matches(allWords))
+                //Get all words
+                string allWords = doc.Content.Text;
+
+                doc.Close();
+                app.Quit();
+
+                Regex regex1 = null;
+                Regex regex2 = null;
+                Regex regex3 = null;
+
+                if (reg == 0)
                 {
-                    int i = match.Index;
-                    if (CalcLune(allWords.Substring(i, 16)))
-                        return true;
-
+                    regex1 = new Regex(@"[0-9]{16}");
+                    regex2 = new Regex("[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}");
+                    regex3 = new Regex(@"[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}");
                 }
-            }
-            if (matches2.Count != 0)
-            {
-                
-
-                foreach (Match match in regex2.Matches(allWords))
+                else
                 {
-                    int i = match.Index;
-                    if (CalcLune(allWords.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
+                    regex1 = new Regex(@"[0-9]{19}");
+                    regex2 = new Regex("[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{3}");
+                    regex3 = new Regex(@"[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{3}");
+                }
+                MatchCollection matches1 = regex1.Matches(allWords);
+                MatchCollection matches2 = regex2.Matches(allWords);
+                MatchCollection matches3 = regex3.Matches(allWords);
+
+                if (matches1.Count != 0)
+                {
+                    foreach (Match match in regex1.Matches(allWords))
                     {
-                        
+                        int i = match.Index;
+                        if (CalcLune(allWords.Substring(i, 16)))
+                        {
+                            Packets.FileInfo.Add(fPath);
+                            Packets.FileInfo.Add(allWords.Substring(i, 16));
+                            Packets.FileInfo.Add(i.ToString());
+                        }
 
-                        return true;
                     }
-
                 }
-            }
-            if (matches3.Count != 0)
-            {
-                foreach (Match match in regex3.Matches(allWords))
+                if (matches2.Count != 0)
                 {
-                    int i = match.Index;
-                    if (CalcLune(allWords.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
-                        return true;
 
+
+                    foreach (Match match in regex2.Matches(allWords))
+                    {
+                        int i = match.Index;
+                        if (CalcLune(allWords.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
+                        {
+                            Packets.FileInfo.Add(fPath);
+                            Packets.FileInfo.Add(allWords.Substring(i, 23));
+                            Packets.FileInfo.Add(i.ToString());
+                        }
+
+                    }
+                }
+                if (matches3.Count != 0)
+                {
+                    foreach (Match match in regex3.Matches(allWords))
+                    {
+                        int i = match.Index;
+                        if (CalcLune(allWords.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
+                        {
+                            Packets.FileInfo.Add(fPath);
+                            Packets.FileInfo.Add(allWords.Substring(i, 19));
+                            Packets.FileInfo.Add(i.ToString());
+                        }
+                    }
                 }
             }
-
-            return false;
-
+            catch { return false; }
+            
+            return true;
         }
         public bool MSExcelMatches(string fPath, int reg)
         {

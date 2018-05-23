@@ -20,6 +20,8 @@ namespace WinServices
         private string MyIPAddr;
         private Thread listenerThread;
         private Thread StartThread;
+        private Thread ProgressThread;
+
         private string MangerIP;
 
         private Packet Packet;
@@ -46,6 +48,11 @@ namespace WinServices
             StartThread.IsBackground = true;
             StartThread.Name = "StartThread";
             StartThread.Start();
+
+            ProgressThread = new Thread(SendProgress);
+            ProgressThread.IsBackground = true;
+            ProgressThread.Name = "StartThread";
+            ProgressThread.Start();
         }
 
         private void SetQuote()
@@ -85,14 +92,13 @@ namespace WinServices
                         client.Close();
                     }
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(5000);
             }
 
         }
 
-        public void SendPacket(Packet pak)
+        private void SendProgress()
         {
-
             while (true)
             {
                 TcpClient client = new TcpClient();
@@ -104,11 +110,14 @@ namespace WinServices
 
                     stream = client.GetStream();
 
-                    byte[] buffer = ToByteArray<Packet>(pak);
+                    if (Packet != null)
+                    {
+                        byte[] buffer = ToByteArray<Packet>(Packet);
 
-                    stream.Write(buffer, 0, buffer.Length);
+                        stream.Write(buffer, 0, buffer.Length);
 
-                    Console.WriteLine("Проверка соединения по адресу: " + MangerIP);
+                        Console.WriteLine("Отправлено: " + buffer.Length + " byte");
+                    }
                 }
                 catch (SocketException ex)
                 {
@@ -127,9 +136,45 @@ namespace WinServices
                         client.Close();
                     }
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
             }
 
+        }
+
+        public void SendPacket(Packet pak)
+        {
+            TcpClient client = new TcpClient();
+
+            NetworkStream stream = null;
+            try
+            {
+                client.Connect(MangerIP, 4568);
+
+                stream = client.GetStream();
+
+                byte[] buffer = ToByteArray<Packet>(pak);
+
+                stream.Write(buffer, 0, buffer.Length);
+
+                Console.WriteLine("Отправлено Результат: " + MangerIP);
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine(ex.Message.ToString());
+            }
+            finally
+            {
+                //
+                if (stream != null)
+                {
+                    stream.Close();
+                }
+
+                if (client.Connected)
+                {
+                    client.Close();
+                }
+            }
         }
 
 
@@ -147,7 +192,7 @@ namespace WinServices
                 {
                     Socket clientSocket = listener.AcceptSocket();
 
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[65000];
 
                     int res = clientSocket.Receive(buffer);
 
@@ -157,15 +202,25 @@ namespace WinServices
 
                         Array.Copy(buffer, buf, res);
 
-                        Packet = new Packet();
+                        if (Packet == null)
+                        {
+                            Packet = new Packet();
 
-                        Packet = FromByteArray<Packet>(buf);
+                            Packet = FromByteArray<Packet>(buf);
 
-                        TODO dowork = new TODO(Packet);
+                            Packet.FileInfo = new List<string>();
 
-                        dowork.Work();
+                            TODO dowork = new TODO(Packet);
 
-                        SendPacket(Packet);
+                            //dowork.CountFiles();
+
+                            dowork.Work();
+
+                            SendPacket(Packet);
+
+                        }
+
+                        Packet = null;
                     }
 
                     clientSocket.Close();
