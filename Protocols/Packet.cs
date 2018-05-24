@@ -19,7 +19,7 @@ namespace Protocols
 
         public string FilePath { get; set; }
 
-        public List<string> FileInfo { get; set; }
+        public string FileInfo { get; set; }
 
         public bool Rar { get; set; }
 
@@ -32,5 +32,7 @@ namespace Protocols
         public long CurrentFile { get; set; }
 
         public string IPAdress { get; set; }
+
+        public int Result { get; set; }
     }
 }
