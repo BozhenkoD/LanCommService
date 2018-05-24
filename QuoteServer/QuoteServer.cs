@@ -138,7 +138,8 @@ namespace WinServices
                             }
                         }
                     }
-                    else {
+                    else
+                    {
                         Console.Write(".");
                     }
                 }

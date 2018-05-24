@@ -287,6 +287,7 @@ namespace WinServices
                                 Matches.Add(fPath);
                                 Matches.Add(allWords.Substring(i, 16));
                                 Matches.Add(i.ToString());
+                                matches = true;
                             }
                             else {
                                 Matches.Add(allWords.Substring(i, 16));
@@ -298,8 +299,6 @@ namespace WinServices
                 }
                 if (matches2.Count != 0)
                 {
-
-
                     foreach (Match match in regex2.Matches(allWords))
                     {
                         int i = match.Index;
@@ -310,6 +309,7 @@ namespace WinServices
                                 Matches.Add(fPath);
                                 Matches.Add(allWords.Substring(i, 23));
                                 Matches.Add(i.ToString());
+                                matches = true;
                             }
                             else {
                                 Matches.Add(allWords.Substring(i, 23));
@@ -331,6 +331,7 @@ namespace WinServices
                                 Matches.Add(fPath);
                                 Matches.Add(allWords.Substring(i, 19));
                                 Matches.Add(i.ToString());
+                                matches = true;
                             }
                             else {
                                 Matches.Add(allWords.Substring(i, 19));
@@ -369,32 +370,6 @@ namespace WinServices
             int usedRowsNum = excelworksheet.UsedRange.Rows.Count;
             int usedColumnsNum = excelworksheet.UsedRange.Columns.Count;
 
-
-
-            string cellValue = "";
-
-            for (int sheet = 1; sheet <= CountSheet; sheet++)
-            {
-                for (int i = 1; i <= usedRowsNum; i++)
-                {
-                    for (int y = 1; y <= usedColumnsNum; y++)
-                    {
-                        Microsoft.Office.Interop.Excel.Range cellRange = (Microsoft.Office.Interop.Excel.Range)excelworksheet.Cells[i, y];
-
-                        if (cellRange.Value != null)
-                        {
-                            cellValue += cellRange.Value.ToString();
-                        }
-                    }
-                }
-                cellValue += "\r\n";
-            }
-            excelappworkbook.Save();
-            excelappworkbook.Close();
-
-            excelapp.Quit();
-
-
             Regex regex1 = null;
             Regex regex2 = null;
             Regex regex3 = null;
@@ -411,78 +386,117 @@ namespace WinServices
                 regex2 = new Regex("[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{4}\\r\\n[0-9]{3}");
                 regex3 = new Regex(@"[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{3}");
             }
-            MatchCollection matches1 = regex1.Matches(cellValue);
-            MatchCollection matches2 = regex2.Matches(cellValue);
-            MatchCollection matches3 = regex3.Matches(cellValue);
+            string cellValue = "";
 
             bool matches = false;
 
-            if (matches1.Count != 0)
+            for (int sheet = 1; sheet <= CountSheet; sheet++)
             {
-                foreach (Match match in regex1.Matches(cellValue))
+                for (int i = 1; i <= usedRowsNum; i++)
                 {
-                    int i = match.Index;
-                    if (CalcLune(cellValue.Substring(i, 16)))
+                    for (int y = 1; y <= usedColumnsNum; y++)
                     {
-                        if (!matches)
-                        {
-                            Matches.Add(fPath);
-                            Matches.Add(cellValue.Substring(i, 16));
-                            Matches.Add(i.ToString());
-                        }
-                        else
-                        {
-                            Matches.Add(cellValue.Substring(i, 16));
-                            Matches.Add(i.ToString());
-                        }
-                    }
+                        Microsoft.Office.Interop.Excel.Range cellRange = (Microsoft.Office.Interop.Excel.Range)excelworksheet.Cells[i, y];
 
-                }
-            }
-            if (matches2.Count != 0)
-            {
-                foreach (Match match in regex2.Matches(cellValue))
-                {
-                    int i = match.Index;
-                    if (CalcLune(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", "")))
-                    {
-                        if (!matches)
+                        if (cellRange.Value != null)
                         {
-                            Matches.Add(fPath);
-                            Matches.Add(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", ""));
-                            Matches.Add(i.ToString());
-                        }
-                        else {
-                            Matches.Add(cellValue.Substring(i, 23).Replace("\r", "").Replace("\n", ""));
-                            Matches.Add(i.ToString());
-                        }
-                    }
+                            cellValue = cellRange.Value.ToString();
 
-                }
-            }
-            if (matches3.Count != 0)
-            {
-                foreach (Match match in regex3.Matches(cellValue))
-                {
-                    int i = match.Index;
-                    if (CalcLune(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
-                    {
-                        if (!matches)
-                        {
-                            Matches.Add(fPath);
-                            Matches.Add(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
-                            Matches.Add(i.ToString());
-                        }
-                        else {
-                            Matches.Add(cellValue.Substring(i, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
-                            Matches.Add(i.ToString());
+                            MatchCollection matches1 = regex1.Matches(cellValue);
+                            MatchCollection matches2 = regex2.Matches(cellValue);
+                            MatchCollection matches3 = regex3.Matches(cellValue);
+
+                            
+
+                            if (matches1.Count != 0)
+                            {
+                                foreach (Match match in regex1.Matches(cellValue))
+                                {
+                                    int q = match.Index;
+                                    if (CalcLune(cellValue.Substring(q, 16)))
+                                    {
+                                        if (!matches)
+                                        {
+                                            Matches.Add(fPath);
+
+                                            Matches.Add(cellValue.Substring(q, 16));
+
+                                            Matches.Add("Sheet:"+sheet.ToString()+"|Row:"+ i.ToString()+"|Column:"+y.ToString()+"|Position:"+q.ToString());
+
+                                            matches = true;
+                                        }
+                                        else
+                                        {
+                                            Matches.Add(cellValue.Substring(q, 16));
+
+                                            Matches.Add("Sheet:" + sheet.ToString() + "|Row:" + i.ToString() + "|Column:" + y.ToString() + "|Position:" + q.ToString());
+                                        }
+                                    }
+
+                                }
+                            }
+                            if (matches2.Count != 0)
+                            {
+                                foreach (Match match in regex2.Matches(cellValue))
+                                {
+                                    int q = match.Index;
+                                    if (CalcLune(cellValue.Substring(q, 23).Replace("\r", "").Replace("\n", "")))
+                                    {
+                                        if (!matches)
+                                        {
+                                            Matches.Add(fPath);
+
+                                            Matches.Add(cellValue.Substring(q, 23).Replace("\r", "").Replace("\n", ""));
+
+                                            Matches.Add("Sheet:" + sheet.ToString() + "|Row:" + i.ToString() + "|Column:" + y.ToString() + "|Position:" + q.ToString());
+                                            matches = true;
+                                        }
+                                        else
+                                        {
+                                            Matches.Add(cellValue.Substring(q, 23).Replace("\r", "").Replace("\n", ""));
+
+                                            Matches.Add("Sheet:" + sheet.ToString() + "|Row:" + i.ToString() + "|Column:" + y.ToString() + "|Position:" + q.ToString());
+                                        }
+                                    }
+                                }
+                            }
+                            if (matches3.Count != 0)
+                            {
+                                foreach (Match match in regex3.Matches(cellValue))
+                                {
+                                    int q = match.Index;
+                                    if (CalcLune(cellValue.Substring(q, 19).Replace(" ", "").Replace("\r", "").Replace("\n", "")))
+                                    {
+                                        if (!matches)
+                                        {
+                                            Matches.Add(fPath);
+
+                                            Matches.Add(cellValue.Substring(q, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
+
+                                            Matches.Add("Sheet:" + sheet.ToString() + "|Row:" + i.ToString() + "|Column:" + y.ToString() + "|Position:" + q.ToString());
+                                            matches = true;
+                                        }
+                                        else
+                                        {
+                                            Matches.Add(cellValue.Substring(q, 19).Replace(" ", "").Replace("\r", "").Replace("\n", ""));
+
+                                            Matches.Add("Sheet:" + sheet.ToString() + "|Row:" + i.ToString() + "|Column:" + y.ToString() + "|Position:" + q.ToString());
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+
+            excelappworkbook.Save();
+
+            excelappworkbook.Close();
+
+            excelapp.Quit();
 
             return true;
-
         }
 
 
@@ -491,8 +505,6 @@ namespace WinServices
             try
             {
                 StreamWriter sw = new StreamWriter(logFileName, true);
-
-                
 
                 foreach (var item in Matches)
                 {
