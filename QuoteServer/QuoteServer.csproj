@@ -42,6 +42,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -50,6 +52,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="7Zip\Common\CommandLineParser.cs" />
+    <Compile Include="7Zip\Common\CRC.cs" />
+    <Compile Include="7Zip\Common\InBuffer.cs" />
+    <Compile Include="7Zip\Common\OutBuffer.cs" />
+    <Compile Include="7Zip\Compress\LZMA\LzmaBase.cs" />
+    <Compile Include="7Zip\Compress\LZMA\LzmaDecoder.cs" />
+    <Compile Include="7Zip\Compress\LZMA\LzmaEncoder.cs" />
+    <Compile Include="7Zip\Compress\LZ\IMatchFinder.cs" />
+    <Compile Include="7Zip\Compress\LZ\LzBinTree.cs" />
+    <Compile Include="7Zip\Compress\LZ\LzInWindow.cs" />
+    <Compile Include="7Zip\Compress\LZ\LzOutWindow.cs" />
+    <Compile Include="7Zip\Compress\RangeCoder\RangeCoder.cs" />
+    <Compile Include="7Zip\Compress\RangeCoder\RangeCoderBit.cs" />
+    <Compile Include="7Zip\Compress\RangeCoder\RangeCoderBitTree.cs" />
+    <Compile Include="7Zip\ICoder.cs" />
     <Compile Include="QuoteServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Search.cs" />
@@ -64,5 +81,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

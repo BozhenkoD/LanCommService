@@ -29,10 +29,33 @@ namespace WinServices
             this.MyIPAddr = MyIP;
             this.MangerIP = ManagerIP;
         }
-        
+
+        public bool StopTCP()
+        {
+            try
+            {
+                Start_bool = false;
+                StartWork_bool = false;
+
+                SetQuoteClient.Close();
+                SendProgressTcp.Close();
+                listenThread.Stop();
+
+                listenerThread.Abort();
+                StartThread.Abort();
+                ProgressThread.Abort();
+
+                return true;
+            }
+            catch  { return false; }
+        }
+
+        bool Start_bool = false;
+        bool StartWork_bool = false;
 
         public void Start()
         {
+            Start_bool = true;
             listenerThread = new Thread(ListenerThread);
             listenerThread.IsBackground = true;
             listenerThread.Name = "Listener";
@@ -41,6 +64,7 @@ namespace WinServices
 
         public void StartWork()
         {
+            StartWork_bool = true;
             StartThread = new Thread(SetQuote);
             StartThread.IsBackground = true;
             StartThread.Name = "StartThread";
@@ -48,29 +72,30 @@ namespace WinServices
 
             ProgressThread = new Thread(SendProgress);
             ProgressThread.IsBackground = true;
-            ProgressThread.Name = "StartThread";
+            ProgressThread.Name = "StartThreadProgress";
             ProgressThread.Start();
         }
 
+        private TcpClient SetQuoteClient;
+
         private void SetQuote()
         {
-
-            while (true)
+            while (StartWork_bool)
             {
-                TcpClient client = new TcpClient();
+                SetQuoteClient = new TcpClient();
 
                 NetworkStream stream = null;
                 try
                 {
-                    client.Connect(MangerIP, 4569);
+                    SetQuoteClient.Connect(MangerIP, 4569);
 
-                    stream = client.GetStream();
+                    stream = SetQuoteClient.GetStream();
 
                     byte[] buffer = new byte[] { 0x01 };
 
                     stream.Write(buffer, 0, buffer.Length);
 
-                    Console.WriteLine("Проверка соединения по адресу: " + MangerIP);
+                    Console.Write("|");
                 }
                 catch (SocketException ex)
                 {
@@ -83,22 +108,26 @@ namespace WinServices
                     {
                         stream.Close();
                     }
-
-                    if (client.Connected)
+                    if (StartWork_bool)
                     {
-                        client.Close();
+                        if (SetQuoteClient.Connected)
+                        {
+                            SetQuoteClient.Close();
+                        }
                     }
                 }
-                Thread.Sleep(5000);
+                Thread.Sleep(1000);
             }
 
         }
 
+        private TcpClient SendProgressTcp;
+
         private void SendProgress()
         {
-            while (true)
+            while (Start_bool)
             {
-                TcpClient client = new TcpClient();
+                SendProgressTcp = new TcpClient();
 
                 NetworkStream stream = null;
                 try
@@ -107,22 +136,21 @@ namespace WinServices
                     {
                         if (Packet.Progress != 100)
                         {
-                            client.Connect(MangerIP, 4568);
+                            SendProgressTcp.Connect(MangerIP, 4568);
 
-                            stream = client.GetStream();
+                            stream = SendProgressTcp.GetStream();
 
                             byte[] buffer = ToByteArray<Packet>(Packet);
 
                             stream.Write(buffer, 0, buffer.Length);
 
                             Console.Write(" [" + buffer.Length + " byte ]");
-
                         }
                         else
                         {
-                            client.Connect(MangerIP, 4568);
+                            SendProgressTcp.Connect(MangerIP, 4568);
 
-                            stream = client.GetStream();
+                            stream = SendProgressTcp.GetStream();
 
                             byte[] buffer = ToByteArray<Packet>(Packet);
 
@@ -155,9 +183,9 @@ namespace WinServices
                         stream.Close();
                     }
 
-                    if (client.Connected)
+                    if (SendProgressTcp.Connected)
                     {
-                        client.Close();
+                        SendProgressTcp.Close();
                     }
                 }
                 Thread.Sleep(1000);
@@ -183,8 +211,11 @@ namespace WinServices
 
             // Release the socket.
             client.Shutdown(SocketShutdown.Both);
+
             client.Close();
         }
+
+        private TcpListener listenThread;
 
         protected void ListenerThread()
         {
@@ -192,13 +223,13 @@ namespace WinServices
             {
                 IPAddress ipAddress = IPAddress.Parse(MyIPAddr);
 
-                TcpListener listener = new TcpListener(ipAddress, 4567);
+                listenThread = new TcpListener(ipAddress, 4567);
 
-                listener.Start();
+                listenThread.Start();
 
-                while (true)
+                while (Start_bool)
                 {
-                    Socket clientSocket = listener.AcceptSocket();
+                    Socket clientSocket = listenThread.AcceptSocket();
 
                     byte[] buffer = new byte[65000];
 
