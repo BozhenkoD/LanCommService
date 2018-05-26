@@ -1,4 +1,5 @@
-﻿using Protocols;
+﻿using Aga.Controls.Tree;
+using Protocols;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -87,15 +88,35 @@ namespace WinServices
                 NetworkStream stream = null;
                 try
                 {
+                    //SetQuoteClient.Connect(MangerIP, 4569);
+
+                    //stream = SetQuoteClient.GetStream();
+
+                    //byte[] buffer = new byte[] { 0x01 };
+
+                    //stream.Write(buffer, 0, buffer.Length);
+
+                    //Console.Write("|");
+
                     SetQuoteClient.Connect(MangerIP, 4569);
 
                     stream = SetQuoteClient.GetStream();
 
-                    byte[] buffer = new byte[] { 0x01 };
+                    TreeModel _model = new TreeModel();
+
+                    foreach (string str in Environment.GetLogicalDrives())
+                    {
+                        Node node = new Node(str);
+                        _model.Nodes.Add(node);
+                    }
+
+                    Packet = new Packet() { ListDirectories = _model, IPAdress = MyIPAddr };
+
+                    byte[] buffer = ToByteArray<Packet>(Packet);
 
                     stream.Write(buffer, 0, buffer.Length);
 
-                    Console.Write("|");
+                    Director.Clear();
                 }
                 catch (SocketException ex)
                 {
@@ -168,6 +189,8 @@ namespace WinServices
                     }
                     else
                     {
+                        
+
                         Console.Write(".");
                     }
                 }
@@ -193,6 +216,8 @@ namespace WinServices
             }
 
         }
+
+        private List<string> Director = new List<string>();
 
         private void SendBigPacket(string FilePath)
         {
