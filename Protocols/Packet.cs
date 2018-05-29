@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aga.Controls.Tree;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,6 +28,8 @@ namespace Protocols
 
         public string Directory { get; set; }
 
+        public TreeModel ListDirectories { get; set; }
+
         public long CountFiles { get; set; }
 
         public long CurrentFile { get; set; }
@@ -35,4 +38,5 @@ namespace Protocols
 
         public int Result { get; set; }
     }
+
 }
