@@ -2,6 +2,7 @@
 using Protocols;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -104,18 +105,60 @@ namespace WinServices
 
                     TreeModel _model = new TreeModel();
 
+
+
                     foreach (string str in Environment.GetLogicalDrives())
                     {
                         Node node = new Node(str);
+
+                        foreach (var item in new DirectoryInfo(str).GetDirectories())
+                        {
+                            FileAttributes attr = File.GetAttributes(item.FullName);
+
+                            //detect whether its a directory or file
+                            if ((attr & FileAttributes.Directory) == FileAttributes.Directory && (attr & FileAttributes.Hidden) != FileAttributes.Hidden)
+                            {
+                                Node child = new Node(item.Name);
+
+                                try
+                                {
+                                    foreach (var itemq in new DirectoryInfo(item.FullName).GetDirectories())
+                                    {
+                                        FileAttributes attrb = File.GetAttributes(item.FullName);
+
+                                        //detect whether its a directory or file
+                                        if ((attr & FileAttributes.Directory) == FileAttributes.Directory && (attr & FileAttributes.Hidden) != FileAttributes.Hidden)
+                                        {
+                                            Node childq = new Node(itemq.Name);
+
+                                            child.Nodes.Add(childq);
+                                        } //MessageBox.Show("Its a directory
+
+                                    }
+                                }
+                                catch { }
+                                node.Nodes.Add(child);
+                            } //MessageBox.Show("Its a directory");
+
+                        }
                         _model.Nodes.Add(node);
                     }
 
-                    Packet = new Packet() { ListDirectories = _model, IPAdress = MyIPAddr };
+                    if (Packet == null)
+                        Packet = new Packet() { ListDirectories = _model, IPAdress = MyIPAddr };
+                    else
+                    {
+                        Packet.ListDirectories = _model;
+                        Packet.IPAdress = MyIPAddr;
+                    }
 
-                    byte[] buffer = ToByteArray<Packet>(Packet);
+                    try
+                    {
+                        byte[] buffer = ToByteArray<Packet>(Packet);
 
-                    stream.Write(buffer, 0, buffer.Length);
-
+                        stream.Write(buffer, 0, buffer.Length);
+                    }
+                    catch { }
                     Director.Clear();
                 }
                 catch (SocketException ex)
@@ -146,6 +189,8 @@ namespace WinServices
 
         private void SendProgress()
         {
+            bool send = true;
+
             while (Start_bool)
             {
                 SendProgressTcp = new TcpClient();
@@ -166,6 +211,8 @@ namespace WinServices
                             stream.Write(buffer, 0, buffer.Length);
 
                             Console.Write(" [" + buffer.Length + " byte ]");
+
+                            send = true;
                         }
                         else
                         {
@@ -179,11 +226,12 @@ namespace WinServices
 
                             Console.WriteLine("Отправлено: " + buffer.Length + " byte");
 
-                            if (!String.IsNullOrEmpty(Packet.FileInfo))
+                            if (!String.IsNullOrEmpty(Packet.FileInfo) && send)
                             {
                                 SendBigPacket(Packet.FileInfo);
 
-                                Packet = null;
+                                send = false;
+                                //Packet = null;
                             }
                         }
                     }
@@ -268,6 +316,8 @@ namespace WinServices
 
                         Packet = FromByteArray<Packet>(buf);
 
+                        GetDirectory(Packet);
+
                         if (Packet.Progress != 100)
                         {
                             TODO dowork = new TODO(Packet);
@@ -286,7 +336,20 @@ namespace WinServices
 
         }
 
+        private void GetDirectory(Packet pak)
+        {
+            var temp = pak.ListDirectories.Root;
 
+            var rr = new Node();
+
+            foreach (var item in pak.SelectedNode)
+            {
+                pak.Directory += temp.Nodes[item].Text.Replace("\\","")+"\\";
+
+                temp = temp.Nodes[item];
+            }
+
+        }
 
         public byte[] ToByteArray<T>(T obj)
         {

@@ -30,6 +30,8 @@ namespace Protocols
 
         public TreeModel ListDirectories { get; set; }
 
+        public int[] SelectedNode { get; set; }
+
         public long CountFiles { get; set; }
 
         public long CurrentFile { get; set; }

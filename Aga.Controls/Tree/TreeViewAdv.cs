@@ -14,6 +14,7 @@ using Aga.Controls.Tree.NodeControls;
 
 namespace Aga.Controls.Tree
 {
+    [Serializable]
 	public partial class TreeViewAdv : Control
 	{
 		#region Inner Classes
